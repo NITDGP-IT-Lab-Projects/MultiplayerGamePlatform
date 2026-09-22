@@ -34,6 +34,8 @@ io.on('connection', (socket) => {
     gameId = parseInt(gameId, 10);
     console.log(`User ${userId} joined lobby for game ${gameId}`);
     
+    // Prevent double-queuing by the same user/socket
+    matchmakingQueue = matchmakingQueue.filter(p => p.userId !== userId && p.socketId !== socket.id);
     matchmakingQueue.push({ socketId: socket.id, userId, gameId });
     
     const sameGameQueue = matchmakingQueue.filter(p => p.gameId === gameId);
@@ -55,8 +57,9 @@ io.on('connection', (socket) => {
 
       activeGames[sessionId] = gameInstance;
 
-      io.sockets.sockets.get(p1.socketId)?.join(sessionId);
-      io.sockets.sockets.get(p2.socketId)?.join(sessionId);
+      // Join sockets to the room securely
+      io.in(p1.socketId).socketsJoin(sessionId);
+      io.in(p2.socketId).socketsJoin(sessionId);
 
       io.to(sessionId).emit('lobby_ready', { sessionId, state: gameInstance.game });
     }
